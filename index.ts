@@ -243,6 +243,13 @@ function getFolder(repositoryName: string, commitSpecifier: string) {
     });
 }
 
+/**
+ * ziskanie vsetkych konfliktov, vsetkych suborov medzi dvoma branchami
+ * @param repositoryName 
+ * @param sourceBranch 
+ * @param destinationBranch 
+ * @returns 
+ */
 function getMergeConflicts(repositoryName: string, sourceBranch: BranchInfo, destinationBranch: BranchInfo) {
     const params: GetMergeConflictsInput = {
         repositoryName,
@@ -270,11 +277,11 @@ function getMergeConflicts(repositoryName: string, sourceBranch: BranchInfo, des
 }
 
 /**
- *
+ * vytvorenie Unreferenced merge commitu ktory "vysi vo vzduchu"
  * @param repositoryName
  * @param sourceBranch
  * @param destinationBranch
- * @param resolutionContent base64 encoded string
+ * @param conflictResolution vysledok mergu na FE
  * @returns
  */
 function mergeAsUnreferencedCommit(
@@ -299,6 +306,14 @@ function mergeAsUnreferencedCommit(
     return client.send(command);
 }
 
+/**
+ * Toto by sme vyuzili pri merge master do task branche
+ * @param repositoryName 
+ * @param sourceBranch 
+ * @param destinationBranch 
+ * @param conflictResolution 
+ * @returns 
+ */
 function createMergeCommit(
     repositoryName: string,
     sourceBranch: BranchInfo,
@@ -322,6 +337,14 @@ function createMergeCommit(
     return client.send(command);
 }
 
+
+/**
+ * cez toto vieme vyhladat existujuci unreferenced merge commit vzniknuty medzi dvoma taskami
+ * @param repositoryName 
+ * @param sourceBranch 
+ * @param destinationBranch 
+ * @returns 
+ */
 function getMergeCommit(repositoryName: string, sourceBranch: BranchInfo, destinationBranch: BranchInfo) {
     const params: GetMergeCommitCommandInput = {
         repositoryName,
