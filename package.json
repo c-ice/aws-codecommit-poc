@@ -1,16 +1,22 @@
 {
-  "name": "aws-code-commit",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@aws-sdk/client-codecommit": "^3.37.0",
-    "@aws-sdk/client-s3": "^3.37.0",
-    "@aws-sdk/node-http-handler": "^3.37.0"
-  }
+    "name": "aws-code-commit",
+    "version": "1.0.0",
+    "description": "",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc --project ./",
+        "start": "npm run build && node ./dist"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@aws-sdk/client-codecommit": "^3.37.0",
+        "@aws-sdk/client-s3": "^3.37.0",
+        "@aws-sdk/node-http-handler": "^3.37.0"
+    },
+    "devDependencies": {
+        "@types/node": "^16.11.1",
+        "ts-node": "^10.3.0",
+        "typescript": "^4.4.4"
+    }
 }
