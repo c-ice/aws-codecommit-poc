@@ -1,6 +1,7 @@
 import {
     AssociateApprovalRuleTemplateWithRepositoryCommand,
     BatchDescribeMergeConflictsCommand,
+    BatchDescribeMergeConflictsCommandOutput,
     BranchInfo,
     ConflictResolution,
     ConflictResolutionStrategyTypeEnum,
@@ -19,6 +20,8 @@ import {
     ListRepositoriesCommand,
     MergeBranchesBySquashCommand,
     MergeBranchesBySquashCommandInput,
+    MergeBranchesByThreeWayCommand,
+    MergeBranchesByThreeWayCommandInput,
     MergeOptionTypeEnum,
     ReplacementTypeEnum,
 } from '@aws-sdk/client-codecommit';
@@ -76,7 +79,11 @@ async function main() {
 
                 // log('getMergeCommit: ', result);
 
-                const conflict = await getMergeConflicts(repo.repositoryName, branchsRepo.t12, branchsRepo.t11);
+                const conflict: BatchDescribeMergeConflictsCommandOutput | null = await getMergeConflicts(
+                    repo.repositoryName,
+                    branchsRepo.t11,
+                    branchsRepo.t12,
+                );
 
                 const conflicts = (conflict?.conflicts || []).map(c => ({
                     ...c,
@@ -151,45 +158,45 @@ async function main() {
 
                 log('lines: ', lines.join('\n'));
 
-                // resolution from FE, both content in base64
-                const resolutionContent = lines
-                    .filter(
-                        line =>
-                            line.indexOf('<<<<<<<') === -1 &&
-                            line.indexOf('=======') === -1 &&
-                            line.indexOf('>>>>>>>') === -1,
-                    )
-                    .join('\n');
+                // // resolution from FE, both content in base64
+                // const resolutionContent = lines
+                //     .filter(
+                //         line =>
+                //             line.indexOf('<<<<<<<') === -1 &&
+                //             line.indexOf('=======') === -1 &&
+                //             line.indexOf('>>>>>>>') === -1,
+                //     )
+                //     .join('\n');
 
-                /// conflict resolution start here
+                // /// conflict resolution start here
 
-                const conflictResolution = {
-                    replaceContents: [
-                        {
-                            content: Buffer.from(Buffer.from(resolutionContent).toString('base64'), 'base64'),
-                            filePath: conflicts[0].conflictMetadata?.filePath,
-                            replacementType: ReplacementTypeEnum.USE_NEW_CONTENT,
-                        },
-                    ],
-                };
+                // const conflictResolution = {
+                //     replaceContents: [
+                //         {
+                //             content: Buffer.from(Buffer.from(resolutionContent).toString('base64'), 'base64'),
+                //             filePath: conflicts[0].conflictMetadata?.filePath,
+                //             replacementType: ReplacementTypeEnum.USE_NEW_CONTENT,
+                //         },
+                //     ],
+                // };
 
-                const resultmerge = await mergeAsUnreferencedCommit(
-                    repo.repositoryName,
-                    branchsRepo.t12,
-                    branchsRepo.t11,
-                    conflictResolution,
-                );
+                // const resultmerge = await mergeAsUnreferencedCommit(
+                //     repo.repositoryName,
+                //     branchsRepo.t12,
+                //     branchsRepo.t11,
+                //     conflictResolution,
+                // );
 
-                log('conflict resolved: ', resultmerge);
+                // log('conflict resolved: ', resultmerge);
 
-                const resultmergeCommit = await createMergeCommit(
-                    repo.repositoryName,
-                    branchsRepo.t12,
-                    branchsRepo.t11,
-                    conflictResolution,
-                );
+                // const resultmergeCommit = await createMergeCommit(
+                //     repo.repositoryName,
+                //     branchsRepo.t12,
+                //     branchsRepo.t11,
+                //     conflictResolution,
+                // );
 
-                log('merge Commit result: ', resultmergeCommit);
+                // log('merge Commit result: ', resultmergeCommit);
             }
         }
 
@@ -245,10 +252,10 @@ function getFolder(repositoryName: string, commitSpecifier: string) {
 
 /**
  * ziskanie vsetkych konfliktov, vsetkych suborov medzi dvoma branchami
- * @param repositoryName 
- * @param sourceBranch 
- * @param destinationBranch 
- * @returns 
+ * @param repositoryName
+ * @param sourceBranch
+ * @param destinationBranch
+ * @returns
  */
 function getMergeConflicts(repositoryName: string, sourceBranch: BranchInfo, destinationBranch: BranchInfo) {
     const params: GetMergeConflictsInput = {
@@ -294,7 +301,7 @@ function mergeAsUnreferencedCommit(
         repositoryName,
         sourceCommitSpecifier: sourceBranch.commitId,
         destinationCommitSpecifier: destinationBranch.commitId,
-        mergeOption: MergeOptionTypeEnum.SQUASH_MERGE,
+        mergeOption: MergeOptionTypeEnum.THREE_WAY_MERGE,
         conflictResolutionStrategy: ConflictResolutionStrategyTypeEnum.AUTOMERGE,
         // authorName?: string;
         // email?: string
@@ -307,14 +314,43 @@ function mergeAsUnreferencedCommit(
 }
 
 /**
- * Toto by sme vyuzili pri merge master do task branche
- * @param repositoryName 
- * @param sourceBranch 
- * @param destinationBranch 
- * @param conflictResolution 
- * @returns 
+ * vytvorenie Unreferenced merge commitu ktory "vysi vo vzduchu"
+ * @param repositoryName
+ * @param sourceBranch
+ * @param destinationBranch
+ * @param conflictResolution vysledok mergu na FE
+ * @returns
  */
 function createMergeCommit(
+    repositoryName: string,
+    sourceBranch: BranchInfo,
+    destinationBranch: BranchInfo,
+    conflictResolution: ConflictResolution,
+) {
+    const params: MergeBranchesByThreeWayCommandInput = {
+        repositoryName,
+        sourceCommitSpecifier: sourceBranch.commitId,
+        destinationCommitSpecifier: destinationBranch.commitId,
+        conflictResolutionStrategy: ConflictResolutionStrategyTypeEnum.AUTOMERGE,
+        // authorName?: string;
+        // email?: string
+        // commitMessage?: string;
+        conflictResolution,
+    };
+    const command = new MergeBranchesByThreeWayCommand(params);
+
+    return client.send(command);
+}
+
+/**
+ * Toto by sme vyuzili pri merge master do task branche
+ * @param repositoryName
+ * @param sourceBranch
+ * @param destinationBranch
+ * @param conflictResolution
+ * @returns
+ */
+function createMergeCommitSquash(
     repositoryName: string,
     sourceBranch: BranchInfo,
     destinationBranch: BranchInfo,
@@ -337,13 +373,12 @@ function createMergeCommit(
     return client.send(command);
 }
 
-
 /**
  * cez toto vieme vyhladat existujuci unreferenced merge commit vzniknuty medzi dvoma taskami
- * @param repositoryName 
- * @param sourceBranch 
- * @param destinationBranch 
- * @returns 
+ * @param repositoryName
+ * @param sourceBranch
+ * @param destinationBranch
+ * @returns
  */
 function getMergeCommit(repositoryName: string, sourceBranch: BranchInfo, destinationBranch: BranchInfo) {
     const params: GetMergeCommitCommandInput = {
